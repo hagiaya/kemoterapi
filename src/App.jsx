@@ -105,6 +105,28 @@ const Layout = ({ children, activeTab }) => {
 };
 
 const RegistrationView = ({ onComplete }) => {
+  const [name, setName] = useState('');
+  const [record, setRecord] = useState('');
+  const [diagnosis, setDiagnosis] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleRegister = async () => {
+    if (!name.trim()) return;
+    setLoading(true);
+    try {
+      const { error } = await supabase.from('patients').insert([{ 
+        name, 
+        record_id: record || `MR-${Math.floor(Math.random() * 100000)}`,
+        diagnosis: diagnosis || 'Rawat Jalan'
+      }]);
+      if (error) console.error("Error registering patient:", error);
+    } catch (err) {
+      console.error(err);
+    }
+    setLoading(false);
+    onComplete(name);
+  };
+
   return (
     <div className="mobile-container pt-8 animate-enter">
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
@@ -139,11 +161,11 @@ const RegistrationView = ({ onComplete }) => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div>
               <label className="label-field">Nama Pasien</label>
-              <input type="text" placeholder="Masukkan nama lengkap" className="input-field" />
+              <input type="text" value={name} onChange={e=>setName(e.target.value)} placeholder="Masukkan nama lengkap" className="input-field" required />
             </div>
             <div>
               <label className="label-field">Nomor Rekam Medis</label>
-              <input type="text" placeholder="Contoh: MC-2023-001" className="input-field" />
+              <input type="text" value={record} onChange={e=>setRecord(e.target.value)} placeholder="Contoh: MC-2023-001" className="input-field" />
             </div>
           </div>
         </section>
@@ -156,7 +178,7 @@ const RegistrationView = ({ onComplete }) => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div>
               <label className="label-field">Diagnosis</label>
-              <input type="text" placeholder="Diagnosis utama" className="input-field" />
+              <input type="text" value={diagnosis} onChange={e=>setDiagnosis(e.target.value)} placeholder="Diagnosis utama" className="input-field" />
             </div>
             <div>
               <label className="label-field">Regimen Kemoterapi</label>
@@ -174,8 +196,8 @@ const RegistrationView = ({ onComplete }) => {
         </section>
 
         <div>
-          <button onClick={onComplete} className="btn-action" style={{ padding: '20px', marginTop: '12px' }}>
-            Konfirmasi Registrasi
+          <button onClick={handleRegister} disabled={loading || !name.trim()} className="btn-action" style={{ padding: '20px', marginTop: '12px', opacity: (loading || !name.trim()) ? 0.5 : 1 }}>
+            {loading ? 'Menyimpan...' : 'Konfirmasi Registrasi'}
           </button>
           <p style={{ textAlign: 'center', fontSize: '12px', fontWeight: '500', color: '#64748b', marginTop: '16px', lineHeight: '1.6' }}>
             Dengan mengonfirmasi, Anda menyetujui Kebijakan Privasi kami terkait data kesehatan.
@@ -343,7 +365,7 @@ const Card = ({ children, className = "" }) => (
 );
 
 // --- PATIENT VIEWS ---
-const PatientHome = ({ questions }) => {
+const PatientHome = ({ questions, patientName }) => {
   const navigate = useNavigate();
   
   return (
@@ -353,7 +375,7 @@ const PatientHome = ({ questions }) => {
         animate={{ opacity: 1, y: 0 }}
         className="mb-10"
       >
-        <h1 className="page-title">Halo, Ibu Sarah</h1>
+        <h1 className="page-title">Halo, {patientName || 'Pasien'}</h1>
         <p className="page-subtitle">Semoga hari ini penuh dengan ketenangan. Mari pantau kesehatan Anda bersama kami.</p>
       </motion.section>
 
@@ -1241,17 +1263,18 @@ function App() {
   const [questions, setQuestions] = useState(INITIAL_QUESTIONS);
   const [guidance, setGuidance] = useState(INITIAL_GUIDANCE);
   const [isRegistered, setIsRegistered] = useState(false);
+  const [patientName, setPatientName] = useState('');
 
   const isAdminRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/admin');
 
   if (!isRegistered && !isAdminRoute) {
-    return <RegistrationView onComplete={() => setIsRegistered(true)} />;
+    return <RegistrationView onComplete={(name) => { setPatientName(name); setIsRegistered(true); }} />;
   }
 
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<PatientHome questions={questions} />} />
+        <Route path="/" element={<PatientHome questions={questions} patientName={patientName} />} />
         <Route path="/monitor" element={<SelfControl questions={questions} guidance={guidance} />} />
         <Route path="/education" element={<EducationView />} />
         <Route path="/emergency" element={<EmergencyView />} />
