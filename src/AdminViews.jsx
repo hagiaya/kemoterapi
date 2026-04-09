@@ -165,7 +165,7 @@ export const AdminPatients = () => {
     const fetchPatients = async () => {
       const [{ data: pts, error }, { data: rpts }] = await Promise.all([
         supabase.from('patients').select('*'),
-        supabase.from('monitoring_reports').select('patient_id, pain_level, vomiting_frequency, nausea, diarrhea, created_at')
+        supabase.from('monitoring_reports').select('*')
       ]);
       
       if (error) {
@@ -246,7 +246,14 @@ export const AdminPatients = () => {
                                         <span>Mual: {r.nausea || 'Aman'}</span>
                                         <span>Frekuensi Muntah: {r.vomiting_frequency}x</span>
                                         <span>Lelah: {r.fatigue || 'Segar'}</span>
+                                        <span>Diare: {r.diarrhea || 'Tidak'}</span>
+                                        {r.others && r.others.length > 0 && <span className="text-indigo-500">Lainnya: {r.others.join(', ')}</span>}
                                       </div>
+                                      {r.note && (
+                                         <div className="mt-3 p-3 bg-slate-50 rounded-xl text-slate-600 block text-[11px] border border-slate-100">
+                                            <span className="font-bold text-slate-400">CATATAN:</span> {r.note}
+                                         </div>
+                                      )}
                                    </div>
                                  </div>
                                ))}
