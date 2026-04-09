@@ -1267,14 +1267,26 @@ const ChatView = ({ isAdmin = false }) => {
 function App() {
   const [questions, setQuestions] = useState(INITIAL_QUESTIONS);
   const [guidance, setGuidance] = useState(INITIAL_GUIDANCE);
-  const [isRegistered, setIsRegistered] = useState(false);
-  const [patientName, setPatientName] = useState('');
-  const [patientId, setPatientId] = useState(null);
+  
+  // Load initial state from localStorage
+  const storedUser = typeof window !== 'undefined' ? localStorage.getItem('chemo_patient') : null;
+  const initialUser = storedUser ? JSON.parse(storedUser) : null;
+  
+  const [isRegistered, setIsRegistered] = useState(!!initialUser);
+  const [patientName, setPatientName] = useState(initialUser ? initialUser.name : '');
+  const [patientId, setPatientId] = useState(initialUser ? initialUser.id : null);
 
   const isAdminRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/admin');
 
   if (!isRegistered && !isAdminRoute) {
-    return <RegistrationView onComplete={(name, id) => { setPatientName(name); setPatientId(id); setIsRegistered(true); }} />;
+    return <RegistrationView onComplete={(name, id) => { 
+      setPatientName(name); 
+      setPatientId(id); 
+      setIsRegistered(true);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chemo_patient', JSON.stringify({ name, id }));
+      }
+    }} />;
   }
 
   return (
