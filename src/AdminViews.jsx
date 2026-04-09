@@ -5,7 +5,7 @@ import {
   MapPin, Plus, Clock, TrendingUp, Phone, Bell, LayoutGrid
 } from 'lucide-react';
 import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip,
   PieChart, Pie, Cell
 } from 'recharts';
 
@@ -62,7 +62,7 @@ export const AdminDashboard = () => {
            if (r.pain_level > 3) nyeri += 1;
            if (r.nausea && r.nausea !== 'Tidak ada' && r.nausea !== 'Ringan') mual += 1;
            if (r.fatigue && r.fatigue !== 'Segar' && r.fatigue !== 'Lemas') lelah += 1; // Count Only Sangat Lemas feeling or any fatigue > 0
-           if ((r.diarrhea && r.diarrhea !== 'Tidak ada') || (r.others && r.others.length > 0)) lainnya += 1;
+           if ((r.diarrhea && r.diarrhea !== 'Tidak ada') || (r.others && r.others?.length > 0)) lainnya += 1;
         });
       }
       
