@@ -880,6 +880,16 @@ const AdminLayout = ({ children }) => {
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
+
+    // Bypass untuk mode demo
+    if (email === 'admin@gmail.com' && password === 'admin123') {
+      setSession({
+        user: { email: 'admin@gmail.com', id: 'dummy-admin-id' }
+      });
+      setLoading(false);
+      return;
+    }
+
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) alert(error.message);
     setLoading(false);
