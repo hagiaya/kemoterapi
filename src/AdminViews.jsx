@@ -162,15 +162,26 @@ export const AdminPatients = () => {
 
   useEffect(() => {
     const fetchPatients = async () => {
-      // Assuming a 'users' or 'patients' table in Supabase
-      const { data, error } = await supabase
-        .from('patients')
-        .select('*');
+      const [{ data: pts, error }, { data: rpts }] = await Promise.all([
+        supabase.from('patients').select('*'),
+        supabase.from('monitoring_reports').select('patient_id, pain_level, vomiting_frequency, nausea, diarrhea, created_at')
+      ]);
       
       if (error) {
         console.error('Error fetching patients:', error);
-      } else {
-        setPatients(data || []);
+      } else if (pts) {
+        const mapped = pts.map(p => {
+          const patientReports = rpts ? rpts.filter(r => r.patient_id === p.id) : [];
+          patientReports.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+          let status = 'Normal';
+          if (patientReports.length > 0) {
+            const latest = patientReports[0];
+            if (latest.pain_level > 6 || parseInt(latest.vomiting_frequency) > 4 || latest.diarrhea === '>= 7x') status = 'Kritis';
+            else if (latest.pain_level > 3 || latest.nausea === 'Berat' || latest.diarrhea === '4-6x') status = 'Bahaya';
+          }
+          return { ...p, calculated_status: status };
+        });
+        setPatients(mapped);
       }
       setLoading(false);
     };
@@ -211,7 +222,7 @@ export const AdminPatients = () => {
                  <td className="py-4">{p.name || p.full_name || 'N/A'}</td>
                  <td>#{p.record_id || p.id || 'MR-900'}</td>
                  <td>{p.diagnosis || 'Kanker'}</td>
-                 <td><span className={`px-3 py-1 rounded-full text-[10px] uppercase font-black bg-emerald-100 text-emerald-700`}>{p.status || 'Normal'}</span></td>
+                 <td><span className={`px-3 py-1 rounded-full text-[10px] uppercase font-black ${p.calculated_status === 'Kritis' ? 'bg-red-100 text-red-700' : p.calculated_status === 'Bahaya' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>{p.calculated_status || 'Normal'}</span></td>
                </tr>
              ))}
           </tbody>
@@ -239,23 +250,63 @@ export const AdminEducationCMS = () => (
   </div>
 );
 
-export const AdminEmergencyLogs = () => (
-  <div className="space-y-8 animate-fade-in max-w-7xl mx-auto">
-    <h1 className="text-3xl font-extrabold text-[#1e293b]">Peringatan Darurat</h1>
-    <div className="grid grid-cols-3 gap-8">
-      <div className="col-span-2 bg-white p-8 rounded-[32px] shadow-sm border border-slate-100 flex gap-6">
-        <div className="w-1/3 bg-red-50 p-6 rounded-2xl text-red-700">
-          <AlertTriangle size={32} className="mb-4"/>
-          <h3 className="font-bold text-lg mb-2">Muntah Parah</h3>
-          <p className="text-xs">Dilaporkan 12 menit yang lalu.</p>
-        </div>
-        <div className="flex-1 space-y-4">
-           <div className="flex justify-between items-center bg-slate-50 p-4 rounded-xl">
-             <span className="font-bold">Kontak: +62 812 3456 7890</span>
-             <button className="bg-[#0f766e] text-white px-4 py-2 rounded-lg font-bold">Hubungi Pasien</button>
-           </div>
-        </div>
+export const AdminEmergencyLogs = () => {
+  const [logs, setLogs] = useState([]);
+  
+  useEffect(() => {
+    const fetchLogs = async () => {
+      const [{ data: pts }, { data: rpts }] = await Promise.all([
+        supabase.from('patients').select('*'),
+        supabase.from('monitoring_reports').select('*').order('created_at', { ascending: false })
+      ]);
+      
+      if (rpts && pts) {
+         const emergencies = rpts.filter(r => r.pain_level > 6 || parseInt(r.vomiting_frequency) > 4 || r.nausea === 'Berat' || r.diarrhea === '>= 7x').map(r => {
+            const pt = pts.find(p => p.id === r.patient_id) || {};
+            let type = 'Kondisi Kritis';
+            if (r.pain_level > 6) type = 'Nyeri Hebat';
+            else if (parseInt(r.vomiting_frequency) > 4) type = 'Muntah Parah';
+            
+            const timeDiff = Math.floor((new Date() - new Date(r.created_at)) / 60000);
+            const timeStr = timeDiff < 60 ? `${timeDiff} menit yang lalu` : `${Math.floor(timeDiff/60)} jam yang lalu`;
+            
+            return {
+              id: r.id,
+              type,
+              time: timeStr,
+              patientName: pt.name || 'Pasien Anonim',
+              record: pt.record_id || 'N/A'
+            };
+         });
+         setLogs(emergencies);
+      }
+    };
+    fetchLogs();
+  }, []);
+
+  return (
+    <div className="space-y-8 animate-fade-in max-w-7xl mx-auto pb-12">
+      <h1 className="text-3xl font-extrabold text-[#1e293b]">Peringatan Darurat</h1>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {logs.length === 0 ? <p className="text-slate-500 font-bold p-8 bg-white rounded-[32px] w-full text-center border border-slate-100 col-span-2 shadow-sm">Tidak ada peringatan medis darurat saat ini.</p> : logs.map(log => (
+          <div key={log.id} className="bg-white p-6 rounded-[32px] shadow-sm border border-red-100 flex gap-6 items-center">
+            <div className="w-1/3 bg-red-50 p-6 rounded-3xl text-red-700 flex flex-col items-center text-center shrink-0">
+              <AlertTriangle size={36} className="mb-3 opacity-90"/>
+              <h3 className="font-black text-sm mb-2">{log.type}</h3>
+              <p className="text-[10px] font-bold opacity-70">{log.time}</p>
+            </div>
+            <div className="flex-1 space-y-4">
+               <div>
+                 <h4 className="text-lg font-black text-slate-800">{log.patientName}</h4>
+                 <p className="text-[11px] font-bold text-slate-400 mt-1 uppercase tracking-wider text-indigo-500 bg-indigo-50 inline-block px-2 py-0.5 rounded-full">RM: {log.record}</p>
+               </div>
+               <div className="pt-2 border-t border-slate-100">
+                 <button className="w-full bg-[#1e293b] text-white px-4 py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 text-sm shadow-xl shadow-slate-200 hover:bg-black transition-colors"><Phone size={16}/> Tangani Sekarang</button>
+               </div>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
-  </div>
-);
+  );
+};
