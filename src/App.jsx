@@ -477,7 +477,21 @@ const SelfControl = ({ questions, guidance }) => {
   const [isFinished, setIsFinished] = useState(false);
   const navigate = useNavigate();
 
-  const handleFinish = () => {
+  const handleFinish = async () => {
+    try {
+      const { error } = await supabase.from('monitoring_reports').insert([{
+        pain_level: answers.pain,
+        nausea: answers.nausea || 'Tidak ada',
+        vomiting_frequency: answers.vomiting,
+        fatigue: answers.fatigue || 'Segar',
+        diarrhea: answers.diarrhea || 'Tidak ada',
+        others: answers.others || [],
+        note: answers.note
+      }]);
+      if (error) console.error("Gagal mengirim laporan:", error);
+    } catch (e) {
+      console.error(e);
+    }
     setIsFinished(true);
   };
 
@@ -940,11 +954,11 @@ const AdminLayout = ({ children }) => {
         </div>
         <nav className="flex-1 p-6 space-y-3">
           {[
-            { to: "/admin", icon: LayoutDashboard, label: "Dashboard" },
-            { to: "/admin/patients", icon: Users, label: "Patients" },
-            { to: "/admin/education", icon: BookOpen, label: "Education CMS" },
-            { to: "/admin/emergency", icon: AlertTriangle, label: "Emergency Logs" },
-            { to: "/admin/questions", icon: Settings, label: "Settings" }
+            { to: "/admin", icon: LayoutDashboard, label: "Ringkasan" },
+            { to: "/admin/patients", icon: Users, label: "Data Pasien" },
+            { to: "/admin/education", icon: BookOpen, label: "CMS Edukasi" },
+            { to: "/admin/emergency", icon: AlertTriangle, label: "Log Darurat" },
+            { to: "/admin/questions", icon: Settings, label: "Pengaturan Input" }
           ].map((item) => (
             <Link 
               key={item.label}
