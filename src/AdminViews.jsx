@@ -12,6 +12,7 @@ import {
 export const AdminDashboard = () => {
   const [data, setData] = useState({ patients: 0, reports: 0, avgPain: 0, criticals: 0 });
   const [chartData, setChartData] = useState([]);
+  const [gejalaData, setGejalaData] = useState([{n:'Nyeri', v:1},{n:'Mual', v:1},{n:'Lelah', v:1},{n:'Lainnya', v:1}]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -27,13 +28,51 @@ export const AdminDashboard = () => {
       
       setData({ patients: pc, reports: rpc, avgPain, criticals });
 
-      // Generate dummy chart data for past 7 days based on today's report
-      const days = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
-      setChartData(days.map((day, i) => ({
-        name: day,
-        Laporan: rpc > 0 ? Math.floor(Math.random() * rpc) + 1 : Math.floor(Math.random() * 5),
-        Kritis: Math.floor(Math.random() * 2)
-      })));
+      // Calculate real chart data
+      const dayCounts = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+      const criticalCounts = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+
+      if (rpts) {
+        rpts.forEach(r => {
+          if (!r.created_at) return;
+          const date = new Date(r.created_at);
+          let day = date.getDay(); // 0 is Sunday
+          let localDay = day === 0 ? 6 : day - 1; // 0 is Mon, 6 is Sun
+          dayCounts[localDay] += 1;
+          if (r.pain_level > 6 || parseInt(r.vomiting_frequency) > 4) {
+             criticalCounts[localDay] += 1;
+          }
+        });
+      }
+
+      setChartData([
+        { name: 'Sen', Laporan: dayCounts[0], Kritis: criticalCounts[0] },
+        { name: 'Sel', Laporan: dayCounts[1], Kritis: criticalCounts[1] },
+        { name: 'Rab', Laporan: dayCounts[2], Kritis: criticalCounts[2] },
+        { name: 'Kam', Laporan: dayCounts[3], Kritis: criticalCounts[3] },
+        { name: 'Jum', Laporan: dayCounts[4], Kritis: criticalCounts[4] },
+        { name: 'Sab', Laporan: dayCounts[5], Kritis: criticalCounts[5] },
+        { name: 'Min', Laporan: dayCounts[6], Kritis: criticalCounts[6] },
+      ]);
+
+      // Calculate real symptom data
+      let nyeri = 0, mual = 0, lelah = 0, lainnya = 0;
+      if (rpts) {
+        rpts.forEach(r => {
+           if (r.pain_level > 3) nyeri += 1;
+           if (r.nausea && r.nausea !== 'Tidak ada' && r.nausea !== 'Ringan') mual += 1;
+           if (r.fatigue && r.fatigue !== 'Segar' && r.fatigue !== 'Lemas') lelah += 1; // Count Only Sangat Lemas feeling or any fatigue > 0
+           if ((r.diarrhea && r.diarrhea !== 'Tidak ada') || (r.others && r.others.length > 0)) lainnya += 1;
+        });
+      }
+      
+      // Prevent completely blank pie if data is empty, showing a grey circle or just keep it 0
+      setGejalaData([
+        {n:'Nyeri', v: nyeri},
+        {n:'Mual', v: mual},
+        {n:'Lelah', v: lelah},
+        {n:'Lainnya', v: lainnya}
+      ]);
     };
     fetchData();
   }, []);
@@ -93,11 +132,21 @@ export const AdminDashboard = () => {
           <h3 className="font-extrabold text-slate-800 mb-6 w-full text-left">Sebaran Gejala</h3>
           <ResponsiveContainer width="100%" height={200}>
             <PieChart>
-              <Pie data={[{n:'Nyeri', v:40},{n:'Mual', v:30},{n:'Lelah', v:20},{n:'Lainnya', v:10}]} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="v">
-                <Cell fill="#0f766e"/>
-                <Cell fill="#14b8a6"/>
-                <Cell fill="#5eead4"/>
-                <Cell fill="#ccfbf1"/>
+              <Tooltip 
+                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                itemStyle={{ fontWeight: 'bold' }}
+              />
+              <Pie data={gejalaData.every(d => d.v === 0) ? [{n:'Kosong', v:1}] : gejalaData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="v">
+                {gejalaData.every(d => d.v === 0) ? (
+                  <Cell fill="#f1f5f9" />
+                ) : (
+                  <>
+                    <Cell fill="#0f766e"/>
+                    <Cell fill="#14b8a6"/>
+                    <Cell fill="#5eead4"/>
+                    <Cell fill="#ccfbf1"/>
+                  </>
+                )}
               </Pie>
             </PieChart>
           </ResponsiveContainer>
