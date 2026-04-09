@@ -1218,7 +1218,9 @@ function App() {
   const [guidance, setGuidance] = useState(INITIAL_GUIDANCE);
   const [isRegistered, setIsRegistered] = useState(false);
 
-  if (!isRegistered) {
+  const isAdminRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/admin');
+
+  if (!isRegistered && !isAdminRoute) {
     return <RegistrationView onComplete={() => setIsRegistered(true)} />;
   }
 
