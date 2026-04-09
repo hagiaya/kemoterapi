@@ -113,18 +113,20 @@ const RegistrationView = ({ onComplete }) => {
   const handleRegister = async () => {
     if (!name.trim()) return;
     setLoading(true);
+    let newId = null;
     try {
-      const { error } = await supabase.from('patients').insert([{ 
+      const { data, error } = await supabase.from('patients').insert([{ 
         name, 
         record_id: record || `MR-${Math.floor(Math.random() * 100000)}`,
         diagnosis: diagnosis || 'Rawat Jalan'
-      }]);
+      }]).select();
       if (error) console.error("Error registering patient:", error);
+      if (data && data.length > 0) newId = data[0].id;
     } catch (err) {
       console.error(err);
     }
     setLoading(false);
-    onComplete(name);
+    onComplete(name, newId);
   };
 
   return (
@@ -486,7 +488,7 @@ const PatientHome = ({ questions, patientName }) => {
 
 
 
-const SelfControl = ({ questions, guidance }) => {
+const SelfControl = ({ questions, guidance, patientId }) => {
   const [answers, setAnswers] = useState({
     pain: 0,
     nausea: null,
@@ -502,6 +504,7 @@ const SelfControl = ({ questions, guidance }) => {
   const handleFinish = async () => {
     try {
       const { error } = await supabase.from('monitoring_reports').insert([{
+        patient_id: patientId,
         pain_level: answers.pain,
         nausea: answers.nausea || 'Tidak ada',
         vomiting_frequency: answers.vomiting,
@@ -1264,18 +1267,19 @@ function App() {
   const [guidance, setGuidance] = useState(INITIAL_GUIDANCE);
   const [isRegistered, setIsRegistered] = useState(false);
   const [patientName, setPatientName] = useState('');
+  const [patientId, setPatientId] = useState(null);
 
   const isAdminRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/admin');
 
   if (!isRegistered && !isAdminRoute) {
-    return <RegistrationView onComplete={(name) => { setPatientName(name); setIsRegistered(true); }} />;
+    return <RegistrationView onComplete={(name, id) => { setPatientName(name); setPatientId(id); setIsRegistered(true); }} />;
   }
 
   return (
     <Router>
       <Routes>
         <Route path="/" element={<PatientHome questions={questions} patientName={patientName} />} />
-        <Route path="/monitor" element={<SelfControl questions={questions} guidance={guidance} />} />
+        <Route path="/monitor" element={<SelfControl questions={questions} guidance={guidance} patientId={patientId} />} />
         <Route path="/education" element={<EducationView />} />
         <Route path="/emergency" element={<EmergencyView />} />
         <Route path="/chat" element={<ChatView />} />
