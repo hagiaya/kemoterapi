@@ -105,28 +105,46 @@ const Layout = ({ children, activeTab }) => {
 };
 
 const RegistrationView = ({ onComplete }) => {
+  const [isLogin, setIsLogin] = useState(false);
   const [name, setName] = useState('');
+  const [password, setPassword] = useState('');
   const [record, setRecord] = useState('');
   const [diagnosis, setDiagnosis] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
-    if (!name.trim()) return;
+    if (!name.trim() || (!isLogin && !password.trim())) return;
     setLoading(true);
     let newId = null;
     try {
-      const { data, error } = await supabase.from('patients').insert([{ 
-        name, 
-        record_id: record || `MR-${Math.floor(Math.random() * 100000)}`,
-        diagnosis: diagnosis || 'Rawat Jalan'
-      }]).select();
-      if (error) console.error("Error registering patient:", error);
-      if (data && data.length > 0) newId = data[0].id;
+      if (isLogin) {
+        // Handle Login
+        const { data, error } = await supabase.from('patients').select('*').eq('name', name).eq('password', password);
+        if (error) console.error("Error logging in:", error);
+        if (data && data.length > 0) {
+           newId = data[0].id;
+           onComplete(name, newId);
+        } else {
+           alert("Nama atau password salah, atau pasien belum terdaftar.");
+        }
+      } else {
+        // Handle Register
+        const { data, error } = await supabase.from('patients').insert([{ 
+          name, 
+          password,
+          record_id: record || `MR-${Math.floor(Math.random() * 100000)}`,
+          diagnosis: diagnosis || 'Rawat Jalan'
+        }]).select();
+        if (error) console.error("Error registering patient:", error);
+        if (data && data.length > 0) {
+           newId = data[0].id;
+           onComplete(name, newId);
+        }
+      }
     } catch (err) {
       console.error(err);
     }
     setLoading(false);
-    onComplete(name, newId);
   };
 
   return (
@@ -141,10 +159,14 @@ const RegistrationView = ({ onComplete }) => {
         <HelpCircle size={20} className="text-slate-400" />
       </header>
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', marginBottom: '40px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', marginBottom: '24px' }}>
         <div style={{ flex: 1 }}>
-          <h1 style={{ fontSize: '30px', fontWeight: '900', color: '#1e293b', lineHeight: '1.2', marginBottom: '8px' }}>Registrasi</h1>
-          <p style={{ fontSize: '14px', fontWeight: '500', color: '#64748b', lineHeight: '1.6' }}>Lengkapi profil Anda untuk mempersonalisasi perjalanan perawatan Anda.</p>
+          <h1 style={{ fontSize: '30px', fontWeight: '900', color: '#1e293b', lineHeight: '1.2', marginBottom: '8px' }}>
+            {isLogin ? 'Masuk' : 'Registrasi'}
+          </h1>
+          <p style={{ fontSize: '14px', fontWeight: '500', color: '#64748b', lineHeight: '1.6' }}>
+            {isLogin ? 'Selamat datang kembali. Silakan masuk untuk memantau perawatan Anda.' : 'Lengkapi profil Anda untuk mempersonalisasi perjalanan perawatan Anda.'}
+          </p>
         </div>
         <div style={{ width: '80px', height: '80px', flexShrink: 0, backgroundColor: '#006257', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', boxShadow: '0 10px 25px rgba(0,98,87,0.2)' }}>
            <User size={32} color="white" />
@@ -166,13 +188,20 @@ const RegistrationView = ({ onComplete }) => {
               <input type="text" value={name} onChange={e=>setName(e.target.value)} placeholder="Masukkan nama lengkap" className="input-field" required />
             </div>
             <div>
-              <label className="label-field">Nomor Rekam Medis</label>
-              <input type="text" value={record} onChange={e=>setRecord(e.target.value)} placeholder="Contoh: MC-2023-001" className="input-field" />
+              <label className="label-field">Kata Sandi</label>
+              <input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Masukkan kata sandi" className="input-field" required />
             </div>
+            {!isLogin && (
+              <div>
+                <label className="label-field">Nomor Rekam Medis</label>
+                <input type="text" value={record} onChange={e=>setRecord(e.target.value)} placeholder="Contoh: MC-2023-001" className="input-field" />
+              </div>
+            )}
           </div>
         </section>
 
-        <section>
+        {!isLogin && (
+          <section>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
             <Stethoscope color="#006257" size={20} />
             <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#334155' }}>Detail Klinis</h3>
@@ -195,15 +224,18 @@ const RegistrationView = ({ onComplete }) => {
               <input type="date" className="input-field" />
             </div>
           </div>
-        </section>
+          </section>
+        )}
 
         <div>
-          <button onClick={handleRegister} disabled={loading || !name.trim()} className="btn-action" style={{ padding: '20px', marginTop: '12px', opacity: (loading || !name.trim()) ? 0.5 : 1 }}>
-            {loading ? 'Menyimpan...' : 'Konfirmasi Registrasi'}
+          <button onClick={handleRegister} disabled={loading || !name.trim() || !password.trim()} className="btn-action" style={{ padding: '20px', marginTop: '12px', opacity: (loading || !name.trim() || !password.trim()) ? 0.5 : 1 }}>
+            {loading ? 'Memproses...' : (isLogin ? 'Masuk Sekarang' : 'Daftar & Konfirmasi')}
           </button>
-          <p style={{ textAlign: 'center', fontSize: '12px', fontWeight: '500', color: '#64748b', marginTop: '16px', lineHeight: '1.6' }}>
-            Dengan mengonfirmasi, Anda menyetujui Kebijakan Privasi kami terkait data kesehatan.
-          </p>
+          {!isLogin && (
+            <p style={{ textAlign: 'center', fontSize: '12px', fontWeight: '500', color: '#64748b', marginTop: '16px', lineHeight: '1.6' }}>
+              Dengan mendaftar, Anda menyetujui Kebijakan Privasi kami terkait data kesehatan.
+            </p>
+          )}
         </div>
       </div>
     </div>

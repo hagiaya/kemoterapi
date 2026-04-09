@@ -159,6 +159,7 @@ export const AdminDashboard = () => {
 export const AdminPatients = () => {
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [expandedId, setExpandedId] = useState(null);
 
   useEffect(() => {
     const fetchPatients = async () => {
@@ -179,7 +180,7 @@ export const AdminPatients = () => {
             if (latest.pain_level > 6 || parseInt(latest.vomiting_frequency) > 4 || latest.diarrhea === '>= 7x') status = 'Kritis';
             else if (latest.pain_level > 3 || latest.nausea === 'Berat' || latest.diarrhea === '4-6x') status = 'Bahaya';
           }
-          return { ...p, calculated_status: status };
+          return { ...p, calculated_status: status, reports: patientReports };
         });
         setPatients(mapped);
       }
@@ -208,22 +209,53 @@ export const AdminPatients = () => {
         <p className="text-center text-slate-400 font-bold p-8">Belum ada data pasien di Supabase.</p>
       ) : (
         <table className="w-full text-left">
-          <thead>
+           <thead>
              <tr className="text-[10px] uppercase tracking-widest text-slate-400 font-black border-b border-slate-100">
                <th className="pb-4">Nama Pasien</th>
                <th className="pb-4">No. Rekam Medis</th>
                <th className="pb-4">Diagnosis</th>
                <th className="pb-4">Status</th>
+               <th className="pb-4"></th>
              </tr>
           </thead>
           <tbody className="text-sm font-bold text-slate-700">
              {patients.map(p => (
-               <tr key={p.id || p.name} className="border-b border-slate-50">
-                 <td className="py-4">{p.name || p.full_name || 'N/A'}</td>
-                 <td>#{p.record_id || p.id || 'MR-900'}</td>
-                 <td>{p.diagnosis || 'Kanker'}</td>
-                 <td><span className={`px-3 py-1 rounded-full text-[10px] uppercase font-black ${p.calculated_status === 'Kritis' ? 'bg-red-100 text-red-700' : p.calculated_status === 'Bahaya' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>{p.calculated_status || 'Normal'}</span></td>
-               </tr>
+               <React.Fragment key={p.id || p.name}>
+                 <tr onClick={() => setExpandedId(expandedId === p.id ? null : p.id)} className="border-b border-slate-50 cursor-pointer hover:bg-slate-50 transition-colors group">
+                   <td className="py-4 pl-2">{p.name || p.full_name || 'N/A'}</td>
+                   <td>#{p.record_id || p.id || 'MR-900'}</td>
+                   <td>{p.diagnosis || 'Kanker'}</td>
+                   <td><span className={`px-3 py-1 rounded-full text-[10px] uppercase font-black ${p.calculated_status === 'Kritis' ? 'bg-red-100 text-red-700' : p.calculated_status === 'Bahaya' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>{p.calculated_status || 'Normal'}</span></td>
+                   <td className="text-slate-300 group-hover:text-indigo-500"><ChevronRight className={`transition-transform ${expandedId === p.id ? 'rotate-90' : ''}`} size={18}/></td>
+                 </tr>
+                 {expandedId === p.id && (
+                   <tr className="bg-[#f8fafc]">
+                     <td colSpan={5} className="p-6 border-b border-slate-100">
+                        <div className="flex items-center gap-2 mb-4">
+                           <LayoutGrid size={16} className="text-indigo-500" />
+                           <h4 className="font-bold text-slate-800 text-sm">Riwayat Analisis & Gejala Pasien</h4>
+                        </div>
+                        {p.reports && p.reports.length > 0 ? (
+                            <div className="space-y-3">
+                               {p.reports.map((r, i) => (
+                                 <div key={r.id || i} className="bg-white p-5 rounded-[16px] shadow-sm border border-slate-100 flex flex-col md:flex-row gap-4 justify-between text-xs items-start md:items-center">
+                                   <div>
+                                      <p className="font-black text-slate-800 text-sm">{r.created_at ? new Date(r.created_at).toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' }) : 'Baru saja'}</p>
+                                      <div className="flex gap-4 mt-2 text-slate-500 font-bold flex-wrap">
+                                        <span>Nyeri: <span className={r.pain_level > 6 ? 'text-red-500' : ''}>{r.pain_level}/10</span></span>
+                                        <span>Mual: {r.nausea || 'Aman'}</span>
+                                        <span>Frekuensi Muntah: {r.vomiting_frequency}x</span>
+                                        <span>Lelah: {r.fatigue || 'Segar'}</span>
+                                      </div>
+                                   </div>
+                                 </div>
+                               ))}
+                            </div>
+                        ) : <p className="text-xs text-slate-400 font-medium italic">Belum ada data riwayat laporan untuk pasien ini.</p>}
+                     </td>
+                   </tr>
+                 )}
+               </React.Fragment>
              ))}
           </tbody>
         </table>
