@@ -832,6 +832,7 @@ const EducationView = () => {
         <p className="page-subtitle">Berdasarkan laporan gejala terakhir Anda, kami menyusun langkah-langkah praktis untuk membantu Anda merasa lebih nyaman hari ini.</p>
         
         <div className="card-main !p-0 overflow-hidden mb-10">
+          <img src="/pain_management.png" alt="Manajemen Nyeri" className="w-full h-56 object-cover" />
           <div className="bg-[#e0f2f1] p-6 flex items-center gap-4">
              <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-[#004d40]">
                <Activity size={20} />
@@ -867,7 +868,8 @@ const EducationView = () => {
           </div>
         </div>
 
-        <div className="card-main p-8 border-l-8 border-l-[#81d4fa]">
+        <div className="card-main p-8 border-l-8 border-l-[#81d4fa] overflow-hidden">
+           <img src="/diet_nausea.png" alt="Mual & Muntah" className="w-full h-48 object-cover rounded-2xl mb-6 shadow-sm" />
            <div className="flex items-center gap-4 mb-6">
               <div className="w-10 h-10 rounded-xl bg-[#e1f5fe] flex items-center justify-center text-[#0288d1]">
                 <Utensils size={20} />
