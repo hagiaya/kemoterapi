@@ -161,6 +161,20 @@ export const AdminPatients = () => {
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState(null);
 
+  const handleVerify = async (id) => {
+    try {
+      const { error } = await supabase.from('patients').update({ status: 'Normal' }).eq('id', id);
+      if (error) {
+        alert("Gagal memverifikasi pasien: " + error.message);
+      } else {
+        alert("Pasien berhasil diverifikasi!");
+        setPatients(patients.map(p => p.id === id ? { ...p, status: 'Normal', calculated_status: 'Normal' } : p));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     const fetchPatients = async () => {
       const [{ data: pts, error }, { data: rpts }] = await Promise.all([
@@ -175,7 +189,9 @@ export const AdminPatients = () => {
           const patientReports = rpts ? rpts.filter(r => r.patient_id === p.id) : [];
           patientReports.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
           let status = 'Normal';
-          if (patientReports.length > 0) {
+          if (p.status === 'Menunggu Verifikasi Admin') {
+            status = 'Menunggu Verifikasi';
+          } else if (patientReports.length > 0) {
             const latest = patientReports[0];
             if (latest.pain_level > 6 || parseInt(latest.vomiting_frequency) > 4 || latest.diarrhea === '>= 7x') status = 'Kritis';
             else if (latest.pain_level > 3 || latest.nausea === 'Berat' || latest.diarrhea === '4-6x') status = 'Bahaya';
@@ -225,16 +241,27 @@ export const AdminPatients = () => {
                    <td className="py-4 pl-2">{p.name || p.full_name || 'N/A'}</td>
                    <td>#{p.record_id || p.id || 'MR-900'}</td>
                    <td>{p.diagnosis || 'Kanker'}</td>
-                   <td><span className={`px-3 py-1 rounded-full text-[10px] uppercase font-black ${p.calculated_status === 'Kritis' ? 'bg-red-100 text-red-700' : p.calculated_status === 'Bahaya' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>{p.calculated_status || 'Normal'}</span></td>
+                   <td><span className={`px-3 py-1 rounded-full text-[10px] uppercase font-black ${p.calculated_status === 'Kritis' ? 'bg-red-100 text-red-700' : p.calculated_status === 'Bahaya' ? 'bg-amber-100 text-amber-700' : p.calculated_status === 'Menunggu Verifikasi' ? 'bg-slate-200 text-slate-700' : 'bg-emerald-100 text-emerald-700'}`}>{p.calculated_status || 'Normal'}</span></td>
                    <td className="text-slate-300 group-hover:text-indigo-500"><ChevronRight className={`transition-transform ${expandedId === p.id ? 'rotate-90' : ''}`} size={18}/></td>
                  </tr>
                  {expandedId === p.id && (
                    <tr className="bg-[#f8fafc]">
                      <td colSpan={5} className="p-6 border-b border-slate-100">
-                        <div className="flex items-center gap-2 mb-4">
+                         {p.calculated_status === 'Menunggu Verifikasi' && (
+                           <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-xl flex items-center justify-between">
+                             <div>
+                               <h4 className="font-bold text-yellow-800 text-sm">Akun Belum Diverifikasi</h4>
+                               <p className="text-xs text-yellow-600 mt-1">Pasien ini mendaftar mandiri dan membutuhkan persetujuan Anda sebelum bisa login.</p>
+                             </div>
+                             <button onClick={() => handleVerify(p.id)} className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-xs font-bold transition-colors">
+                               Setujui & Verifikasi
+                             </button>
+                           </div>
+                         )}
+                         <div className="flex items-center gap-2 mb-4">
                            <LayoutGrid size={16} className="text-indigo-500" />
                            <h4 className="font-bold text-slate-800 text-sm">Riwayat Analisis & Gejala Pasien</h4>
-                        </div>
+                         </div>
                         {p.reports && p.reports.length > 0 ? (
                             <div className="space-y-3">
                                {p.reports.map((r, i) => (

@@ -63,6 +63,8 @@ import { supabase } from './supabaseClient';
 // --- SHARED COMPONENTS ---
 const Layout = ({ children, activeTab }) => {
   const navigate = useNavigate();
+  const storedUser = typeof window !== 'undefined' ? localStorage.getItem('chemo_patient') : null;
+  const patientName = storedUser ? JSON.parse(storedUser).name : 'Patient';
   return (
     <div className="mobile-container pb-32">
       <header className="header-top">
@@ -78,7 +80,7 @@ const Layout = ({ children, activeTab }) => {
              <div style={{ position: 'absolute', top: '10px', right: '10px', width: '8px', height: '8px', borderRadius: '50%', background: '#b71c1c' }}></div>
            </div>
            <div style={{ width: '44px', height: '44px', borderRadius: '50%', overflow: 'hidden', border: '2px solid #e0f2f1' }}>
-             <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop" alt="User" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+             <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${patientName || 'User'}`} alt="User" style={{ width: '100%', height: '100%', objectFit: 'cover', backgroundColor: '#eef2ff' }} />
            </div>
         </div>
       </header>
@@ -122,6 +124,11 @@ const RegistrationView = ({ onComplete }) => {
         const { data, error } = await supabase.from('patients').select('*').eq('name', name).eq('password', password);
         if (error) console.error("Error logging in:", error);
         if (data && data.length > 0) {
+           if (data[0].status === 'Menunggu Verifikasi Admin') {
+              alert("Akun Anda belum diverifikasi oleh Admin. Harap menunggu.");
+              setLoading(false);
+              return;
+           }
            newId = data[0].id;
            onComplete(name, newId);
         } else {
@@ -133,12 +140,13 @@ const RegistrationView = ({ onComplete }) => {
           name, 
           password,
           record_id: record || `MR-${Math.floor(Math.random() * 100000)}`,
-          diagnosis: diagnosis || 'Rawat Jalan'
+          diagnosis: diagnosis || 'Rawat Jalan',
+          status: 'Menunggu Verifikasi Admin'
         }]).select();
         if (error) console.error("Error registering patient:", error);
         if (data && data.length > 0) {
-           newId = data[0].id;
-           onComplete(name, newId);
+           alert("Pendaftaran berhasil. Silakan tunggu verifikasi admin sebelum Anda dapat login.");
+           setIsLogin(true);
         }
       }
     } catch (err) {
@@ -167,6 +175,9 @@ const RegistrationView = ({ onComplete }) => {
           <p style={{ fontSize: '14px', fontWeight: '500', color: '#64748b', lineHeight: '1.6' }}>
             {isLogin ? 'Selamat datang kembali. Silakan masuk untuk memantau perawatan Anda.' : 'Lengkapi profil Anda untuk mempersonalisasi perjalanan perawatan Anda.'}
           </p>
+          <button onClick={() => setIsLogin(!isLogin)} style={{ background: 'none', border: 'none', color: '#006257', fontWeight: '800', marginTop: '12px', fontSize: '14px', cursor: 'pointer', borderBottom: '1px solid #006257', paddingBottom: '2px' }}>
+            {isLogin ? 'Belum punya akun? Daftar di sini' : 'Sudah punya akun? Masuk di sini'}
+          </button>
         </div>
         <div style={{ width: '80px', height: '80px', flexShrink: 0, backgroundColor: '#006257', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', boxShadow: '0 10px 25px rgba(0,98,87,0.2)' }}>
            <User size={32} color="white" />
@@ -220,7 +231,7 @@ const RegistrationView = ({ onComplete }) => {
               </select>
             </div>
             <div>
-              <label className="label-field">Tanggal Kemoterapi Berikutnya</label>
+              <label className="label-field">Tanggal Kemoterapi</label>
               <input type="date" className="input-field" />
             </div>
           </div>
@@ -417,18 +428,20 @@ const PatientHome = ({ questions, patientName }) => {
       <div className="card-gradient shadow-xl shadow-[#006257]/10">
         <div className="flex justify-between items-start mb-6">
            <div>
-              <span className="bg-[#004d40] text-[9px] font-black text-white px-3 py-1.5 rounded-lg uppercase tracking-widest mb-3 inline-block">Jadwal Terdekat</span>
-              <h3 className="text-xl font-black mb-2">Kemoterapi Sesi 4</h3>
+              <span className="bg-[#004d40] text-[9px] font-black text-white px-3 py-1.5 rounded-lg uppercase tracking-widest mb-3 inline-block">Data Pasien</span>
+              <h3 className="text-xl font-black mb-1">{patientName || 'Nama Pasien'}</h3>
+              <p className="text-sm font-bold text-[#004d40] mb-1">Diagnosa: Kanker Payudara</p>
+              <p className="text-sm font-bold text-[#004d40] mb-3">Kemoterapi ke-4</p>
               <div className="flex items-center gap-2 text-[#004d40] font-bold text-xs opacity-90">
                  <Bell size={14} />
-                 <span>Kamis, 24 Oktober 2024 - 09:00</span>
+                 <span>Jadwal: Kamis, 24 Oktober 2024</span>
               </div>
            </div>
         </div>
         <button className="bg-[#004d40] text-white px-6 py-2.5 rounded-xl font-bold text-xs mb-8">Detail Jadwal</button>
         <div className="flex justify-center">
-           <div className="w-32 h-32 rounded-full border-4 border-white overflow-hidden shadow-2xl relative">
-              <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&h=300&fit=crop" className="w-full h-full object-crop" />
+           <div className="w-32 h-32 rounded-full border-4 border-white overflow-hidden shadow-2xl relative bg-white">
+              <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${patientName || 'Patient'}`} className="w-full h-full object-cover" style={{ backgroundColor: '#eef2ff' }} />
            </div>
         </div>
       </div>
@@ -448,24 +461,17 @@ const PatientHome = ({ questions, patientName }) => {
           <ChevronRight size={18} className="text-slate-300 group-hover:text-[#006257] transition-all" />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="card-main flex flex-col items-center gap-4 text-center cursor-pointer">
-             <div className="w-12 h-12 rounded-xl bg-[#e3f2fd] flex items-center justify-center text-[#1976d2]">
-               <Settings size={22} />
-             </div>
-             <div>
-               <h4 className="font-bold text-slate-800 text-xs">Tools</h4>
-               <p className="text-[9px] text-slate-400 font-medium mt-1">Kalkulator BMI & Pengingat Obat</p>
-             </div>
-          </div>
-          <div onClick={() => navigate('/education')} className="card-main flex flex-col items-center gap-4 text-center cursor-pointer">
+        <div onClick={() => navigate('/education')} className="card-main flex items-center justify-between cursor-pointer group hover:border-[#0288d1]/20">
+          <div className="flex items-center gap-5">
              <div className="w-12 h-12 rounded-xl bg-[#e1f5fe] flex items-center justify-center text-[#0288d1]">
-               <BookOpen size={22} />
+               <BookOpen size={24} />
              </div>
              <div>
-               <h4 className="font-bold text-slate-800 text-xs mt-1">Edukasi</h4>
+               <h4 className="font-bold text-slate-800 text-sm">Pusat Edukasi</h4>
+               <p className="text-[10px] text-slate-400 font-medium">Panduan perawatan & penjelasan medis</p>
              </div>
           </div>
+          <ChevronRight size={18} className="text-slate-300 group-hover:text-[#0288d1] transition-all" />
         </div>
 
         {/* Emergency Alert Card */}
@@ -523,9 +529,9 @@ const PatientHome = ({ questions, patientName }) => {
 const SelfControl = ({ questions, guidance, patientId }) => {
   const [answers, setAnswers] = useState({
     pain: 0,
-    nausea: null,
+    nausea: 0,
     vomiting: 0,
-    fatigue: null,
+    fatigue: 0,
     diarrhea: null,
     note: ''
   });
@@ -538,9 +544,9 @@ const SelfControl = ({ questions, guidance, patientId }) => {
       const { error } = await supabase.from('monitoring_reports').insert([{
         patient_id: patientId,
         pain_level: answers.pain,
-        nausea: answers.nausea || 'Tidak ada',
+        nausea: answers.nausea,
         vomiting_frequency: answers.vomiting,
-        fatigue: answers.fatigue || 'Segar',
+        fatigue: answers.fatigue,
         diarrhea: answers.diarrhea || 'Tidak ada',
         others: answers.others || [],
         note: answers.note
@@ -580,7 +586,19 @@ const SelfControl = ({ questions, guidance, patientId }) => {
                  else { text = 'Tidak ada rasa nyeri, sangat baik!'; }
                }
 
-               if (key === 'nausea' && val === 'Berat') { status = 'red'; text = 'Risiko dehidrasi. Segera ke IGD.'; }
+               if (key === 'nausea') {
+                 if (val >= 1 && val <= 3) { status = 'green'; text = 'Makan sedikit tapi sering, gunakan porsi kecil.'; }
+                 else if (val >= 4 && val <= 6) { status = 'yellow'; text = 'Hindari bau menyengat dan makanan terlalu berlemak/pedas.'; }
+                 else if (val > 6) { status = 'red'; text = 'Risiko dehidrasi. Segera ke IGD.'; }
+                 else { text = 'Tidak ada rasa mual, pertahankan pola makan baik!'; }
+               }
+
+               if (key === 'fatigue') {
+                 if (val >= 1 && val <= 3) { status = 'green'; text = 'Bisa jalan santai ringan untuk memperlancar sirkulasi.'; }
+                 else if (val >= 4 && val <= 6) { status = 'yellow'; text = 'Pilih kegiatan yang penting saja (misalnya makan/mandi), lakukan istirahat pendek.'; }
+                 else if (val > 6) { status = 'red'; text = 'Perlu istirahat total, segera hubungi tim medis jika sesak atau pusing hebat.'; }
+                 else { text = 'Kondisi energi sangat baik!'; }
+               }
                
                const theme = status === 'red' ? 'info-red' : (status === 'yellow' ? 'info-amber' : 'info-emerald');
 
@@ -626,33 +644,35 @@ const SelfControl = ({ questions, guidance, patientId }) => {
               <h3 className="font-extrabold text-slate-800 text-sm">Skala Nyeri</h3>
            </div>
            <p className="text-[10px] font-bold text-slate-400 mb-6 leading-relaxed">Tentukan tingkat nyeri yang Anda rasakan saat ini (0-10)</p>
-           <div className="btn-choice-grid mb-8">
-              {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => {
-                let emoji = '😄';
-                if (num >= 1 && num <= 2) emoji = '🙂';
-                else if (num >= 3 && num <= 4) emoji = '😐';
-                else if (num >= 5 && num <= 6) emoji = '😟';
-                else if (num >= 7 && num <= 8) emoji = '😫';
-                else if (num >= 9 && num <= 10) emoji = '😭';
-
+           <div className="btn-choice-grid mb-8 scrollbar-hide" style={{ display: 'flex', gap: '8px', paddingBottom: '12px' }}>
+              {[
+                { label: '0', val: 0, color: '#10b981', emoji: '😄' },
+                { label: '1-3', val: 2, color: '#eab308', emoji: '🙂' },
+                { label: '4-6', val: 5, color: '#f97316', emoji: '😟' },
+                { label: '7-10', val: 8, color: '#ef4444', emoji: '😭' }
+              ].map((item) => {
+                const isActive = answers.pain === item.val;
                 return (
                   <motion.div 
-                    key={num} 
+                    key={item.label} 
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    animate={answers.pain === num ? { scale: 1.1, y: -4 } : { scale: 1, y: 0 }}
-                    onClick={() => setAnswers({...answers, pain: num})}
-                    className={`choice-box ${answers.pain === num ? 'active' : ''}`}
-                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px 8px' }}
+                    animate={isActive ? { scale: 1.1, y: -4 } : { scale: 1, y: 0 }}
+                    onClick={() => setAnswers({...answers, pain: item.val})}
+                    className={`choice-box ${isActive ? 'active' : ''}`}
+                    style={{ 
+                      flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px 8px',
+                      ...(isActive ? { backgroundColor: item.color, borderColor: item.color, color: '#fff' } : {})
+                    }}
                   >
                     <motion.span 
-                      animate={answers.pain === num ? { scale: 1.2, rotate: [0, -10, 10, -10, 0] } : { scale: 1, rotate: 0 }}
+                      animate={isActive ? { scale: 1.2, rotate: [0, -10, 10, -10, 0] } : { scale: 1, rotate: 0 }}
                       transition={{ duration: 0.5 }}
                       style={{ fontSize: '24px' }}
                     >
-                      {emoji}
+                      {item.emoji}
                     </motion.span>
-                    <span>{num}</span>
+                    <span>{item.label}</span>
                   </motion.div>
                 );
               })}
@@ -666,17 +686,38 @@ const SelfControl = ({ questions, guidance, patientId }) => {
               </div>
               <h3 className="font-extrabold text-slate-800 text-sm">Mual</h3>
            </div>
-           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {['Ringan', 'Sedang', 'Berat'].map((option) => (
-                <div 
-                  key={option} 
-                  onClick={() => setAnswers({...answers, nausea: option})}
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderRadius: '16px', border: answers.nausea === option ? '2px solid #006257' : '2px solid #f1f5f9', background: answers.nausea === option ? '#f0f9f8' : 'white', cursor: 'pointer' }}
-                >
-                   <span style={{ fontSize: '14px', fontWeight: '800', color: '#334155' }}>{option}</span>
-                   <div style={{ width: '22px', height: '22px', borderRadius: '50%', border: answers.nausea === option ? '6px solid #006257' : '2px solid #cbd5e1', transition: 'all 0.2s' }}></div>
-                </div>
-              ))}
+           <div className="btn-choice-grid mb-8 scrollbar-hide" style={{ display: 'flex', gap: '8px', paddingBottom: '12px' }}>
+              {[
+                { label: '0', val: 0, color: '#10b981', emoji: '😄' },
+                { label: '1-3', val: 2, color: '#eab308', emoji: '🙂' },
+                { label: '4-6', val: 5, color: '#f97316', emoji: '🤢' },
+                { label: '7-10', val: 8, color: '#ef4444', emoji: '🤮' }
+              ].map((item) => {
+                const isActive = answers.nausea === item.val;
+                return (
+                  <motion.div 
+                    key={item.label} 
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    animate={isActive ? { scale: 1.1, y: -4 } : { scale: 1, y: 0 }}
+                    onClick={() => setAnswers({...answers, nausea: item.val})}
+                    className={`choice-box ${isActive ? 'active' : ''}`}
+                    style={{ 
+                      flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px 8px',
+                      ...(isActive ? { backgroundColor: item.color, borderColor: item.color, color: '#fff' } : {})
+                    }}
+                  >
+                    <motion.span 
+                      animate={isActive ? { scale: 1.2, rotate: [0, -10, 10, -10, 0] } : { scale: 1, rotate: 0 }}
+                      transition={{ duration: 0.5 }}
+                      style={{ fontSize: '24px' }}
+                    >
+                      {item.emoji}
+                    </motion.span>
+                    <span>{item.label}</span>
+                  </motion.div>
+                );
+              })}
            </div>
         </section>
 
@@ -721,21 +762,38 @@ const SelfControl = ({ questions, guidance, patientId }) => {
            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <LayoutDashboard size={20} color="#475569" />
               <h3 style={{ fontWeight: '800', color: '#1e293b', fontSize: '16px', marginTop: '4px' }}>Kelelahan</h3>
-              <div style={{ display: 'flex', gap: '12px' }}>
+              <div className="btn-choice-grid mb-8 scrollbar-hide" style={{ display: 'flex', gap: '8px', paddingBottom: '12px' }}>
                 {[
-                  { label: 'Segar', icon: '😊' },
-                  { label: 'Lemas', icon: '😐' },
-                  { label: 'Sangat Lemas', icon: '😴' },
-                ].map((item) => (
-                  <div 
-                    key={item.label}
-                    onClick={() => setAnswers({...answers, fatigue: item.label})}
-                    style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px 8px', borderRadius: '16px', border: answers.fatigue === item.label ? '2px solid #006257' : '2px solid #f1f5f9', background: answers.fatigue === item.label ? '#f0f9f8' : 'white', cursor: 'pointer', transition: 'all 0.2s', textAlign: 'center' }}
-                  >
-                     <span style={{ fontSize: '24px' }}>{item.icon}</span>
-                     <span style={{ fontSize: '12px', color: answers.fatigue === item.label ? '#006257' : '#64748b', fontWeight: answers.fatigue === item.label ? '800' : '600' }}>{item.label}</span>
-                  </div>
-                ))}
+                  { label: '0', val: 0, color: '#10b981', emoji: '😊' },
+                  { label: '1-3', val: 2, color: '#eab308', emoji: '😐' },
+                  { label: '4-6', val: 5, color: '#f97316', emoji: '🥱' },
+                  { label: '7-10', val: 8, color: '#ef4444', emoji: '😴' }
+                ].map((item) => {
+                  const isActive = answers.fatigue === item.val;
+                  return (
+                    <motion.div 
+                      key={item.label} 
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      animate={isActive ? { scale: 1.1, y: -4 } : { scale: 1, y: 0 }}
+                      onClick={() => setAnswers({...answers, fatigue: item.val})}
+                      className={`choice-box ${isActive ? 'active' : ''}`}
+                      style={{ 
+                        flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px 8px',
+                        ...(isActive ? { backgroundColor: item.color, borderColor: item.color, color: '#fff' } : {})
+                      }}
+                    >
+                      <motion.span 
+                        animate={isActive ? { scale: 1.2, rotate: [0, -10, 10, -10, 0] } : { scale: 1, rotate: 0 }}
+                        transition={{ duration: 0.5 }}
+                        style={{ fontSize: '24px' }}
+                      >
+                        {item.emoji}
+                      </motion.span>
+                      <span>{item.label}</span>
+                    </motion.div>
+                  );
+                })}
               </div>
            </div>
         </section>
@@ -856,78 +914,148 @@ const EmergencyView = () => {
   );
 };
 
+const EDUCATION_CONTENT = [
+  {
+    id: 'nyeri',
+    title: 'Nyeri',
+    icon: Activity,
+    color: '#006257',
+    bg: '#e0f2f1',
+    items: [
+      { t: "1. Teknik Relaksasi", d: "Tarik napas dalam melalui hidung (hitung sampai 4), tahan sebentar, lalu buangkan perlahan melalui mulut (hitung sampai 6).\nNote: Ibu/Saudari dapat mengulang sesi ini 3 sampai 4 kali sehari, atau kapan pun merasa nyeri, cemas, atau sesak ringan muncul. Jika memungkinkan, lakukan sambil duduk tegak atau berbaring santai dengan bahu yang lemas." },
+      { t: "2. Teknik Pengalihan Perhatian", d: "Fokuslah pada hal yang Ibu/saudari sukai. Bisa dengan mendengarkan musik lembut, menonton film lucu, membaca buku, atau mengobrol dengan keluarga." },
+      { t: "3. Pijatan Lembut", d: "Gunakan kompres hangat pada area yang pegal atau kaku. Gunakan kompres dingin (dibalut handuk) jika ada area yang terasa berdenyut atau meradang. (Catatan: Hindari area yang baru saja diradiasi jika ada)." },
+      { t: "4. Atur Posisi Tidur yang Nyaman", d: "- Nyeri Punggung & Pinggang: Tidur terlentang dengan bantal di bawah lutut, atau tidur miring dengan bantal di antara kedua lutut untuk menjaga posisi tulang belakang.\n- Nyeri Leher & Bahu: Gunakan bantal yang menopang lekukan leher (hindari tidur tengkurap), dan hindari menindih sisi bahu yang sakit saat tidur miring.\n- Nyeri Perut, Sesak, atau Bengkak: Gunakan posisi setengah duduk (kepala lebih tinggi) untuk sesak/nyeri perut, atau ganjal kaki lebih tinggi dari jantung jika ada bengkak di area kaki." },
+      { t: "Kapan Harus Minum Obat?", d: "- Patuhi Jadwal: Jika dokter memberikan obat antinyeri (seperti Paracetamol atau obat resep lainnya), minum tepat waktu. Jangan menunggu nyeri menjadi \"sangat berat\" baru minum obat, karena obat akan lebih sulit bekerja jika nyeri sudah mencapai puncaknya.\n- Catat Nyeri: Gunakan skala 0-10 yang ada di aplikasi. Jika nyeri tidak turun setelah melakukan teknik relaksasi dan minum obat, segera hubungi tim medis." }
+    ]
+  },
+  {
+    id: 'mual',
+    title: 'Mual',
+    icon: AlertTriangle,
+    color: '#0288d1',
+    bg: '#e1f5fe',
+    items: [
+      { t: "Makan Sedikit tapi Sering", d: "Jangan makan dalam porsi besar sekaligus. Makanlah dalam jumlah sedikit namun lebih sering sepanjang hari." },
+      { t: "Pilih Makanan Ringan", d: "Camilan atau makanan dalam porsi kecil biasanya lebih mudah diterima oleh perut daripada makan besar." },
+      { t: "Suhu Makanan", d: "Makanan dan minuman bening yang disajikan dalam suhu ruangan atau dingin biasanya lebih nyaman di perut daripada yang panas." },
+      { t: "Hindari Makanan Berat & Menyengat", d: "Jauhi makanan yang terlalu berlemak, berminyak, pedas, atau terlalu manis. Sebisa mungkin hindari makanan yang aromanya sangat tajam karena bisa memicu mual." },
+      { t: "Atur Waktu Minum", d: "Cobalah untuk minum di antara waktu makan, bukan saat sedang makan (agar perut tidak terlalu penuh)." },
+      { t: "Posisi Tubuh", d: "Makanlah dengan posisi duduk tegak. Tetaplah duduk tegak atau jangan berbaring selama kurang lebih satu jam setelah makan." }
+    ]
+  },
+  {
+    id: 'muntah',
+    title: 'Muntah',
+    icon: AlertCircle,
+    color: '#c62828',
+    bg: '#ffebee',
+    items: [
+      { t: "Istirahatkan Perut", d: "Jika baru saja muntah, jangan makan atau minum apa pun selama 30–60 menit. Biarkan perut Anda tenang." },
+      { t: "Mulai Cairan Perlahan", d: "Setelah perut tenang, cobalah minum sedikit demi sedikit (1 sendok makan setiap 10 menit). Gunakan cairan bening dan dingin, seperti air putih dingin atau kuah sup bening (kaldu) yang sudah dingin." },
+      { t: "Posisi Tubuh", d: "Tetap duduk tegak atau gunakan bantal tinggi. Jangan berbaring telentang segera setelah makan atau minum untuk mencegah cairan naik kembali." },
+      { t: "Camilan Kering", d: "Jika mual berkurang, cobalah makan sedikit makanan kering dan tawar, seperti biskuit kraker, roti tawar, atau sereal kering." }
+    ]
+  },
+  {
+    id: 'kelelahan',
+    title: 'Kelelahan',
+    icon: HeartPulse,
+    color: '#475569',
+    bg: '#f1f5f9',
+    items: [
+      { t: "Prioritas Aktivitas", d: "Pilih kegiatan yang paling penting saja (misalnya: makan dan mandi). Tunda pekerjaan rumah tangga yang berat." },
+      { t: "Istirahat Berkala", d: "Jangan menunggu sampai sangat lelah baru beristirahat. Lakukan istirahat pendek (15–20 menit) di sela-sela aktivitas." },
+      { t: "Aktivitas Ringan", d: "Jalan santai di dalam rumah atau peregangan ringan selama 10–15 menit dapat meningkatkan aliran darah dan mengurangi rasa lemas. Jika merasa pusing atau napas pendek, segera berhenti dan istirahat." }
+    ]
+  },
+  {
+    id: 'diare',
+    title: 'Diare',
+    icon: Wind,
+    color: '#d97706',
+    bg: '#fef3c7',
+    items: [
+      { t: "1. Hidrasi", d: "Minumlah minimal 2,5 hingga 3 liter per hari (sekitar 10-12 gelas)." },
+      { t: "2. Pilih Makanan Rendah Serat", d: "- Pisang (membantu memadatkan tinja dan menambah kalium).\n- Nasi putih atau bubur.\n- Jus apel atau apel kupas.\n- Roti panggang putih." },
+      { t: "3. Pola Makan", d: "Makanlah dalam jumlah sedikit setiap 2-3 jam sekali agar perut tidak kaget." },
+      { t: "4. Hindari Pemicu", d: "- Tinggi Lemak & Minyak: Hindari gorengan, santan kental, dan makanan bersantan.\n- Mengandung Gas: Hindari sayuran seperti brokoli, kubis, kembang kol, dan kacang-kacangan.\n- Minuman Berkafein & Soda: Kopi, teh kental, dan minuman berkarbonasi dapat merangsang usus bergerak lebih cepat.\n- Susu & Produk Susu: Beberapa pasien menjadi intoleran terhadap laktosa (susu) untuk sementara selama kemoterapi." }
+    ]
+  },
+  {
+    id: 'pusing',
+    title: 'Pusing',
+    icon: Activity,
+    color: '#7c3aed',
+    bg: '#e0e7ff',
+    items: [
+      { t: "1. Bangun Bertahap", d: "Jika Ibu/saudari sedang berbaring, duduklah di tepi tempat tidur selama 1–2 menit sebelum berdiri. Gerakkan kaki Anda perlahan untuk memperlancar aliran darah." },
+      { t: "2. Gunakan Pegangan", d: "Selalu pastikan ada tumpuan atau pegangan saat berdiri dari kursi atau toilet." },
+      { t: "3. Hidrasi", d: "Pastikan minum minimal 2 liter air per hari (kecuali ada pembatasan cairan dari dokter)." },
+      { t: "4. Cemilan Kecil", d: "Pusing bisa disebabkan oleh kadar gula darah yang turun. Sediakan biskuit atau buah di dekat ibu/saudari." }
+    ]
+  },
+  {
+    id: 'rambut_rontok',
+    title: 'Rambut Rontok',
+    icon: User,
+    color: '#be185d',
+    bg: '#fce7f3',
+    items: [
+      { t: "Kapan Terjadi", d: "Biasanya dimulai 2–3 minggu setelah sesi kemoterapi pertama. Rambut bisa rontok secara bertahap atau dalam jumlah besar sekaligus. Kulit kepala mungkin terasa sensitif, gatal, atau perih sebelum rontok." },
+      { t: "Pemulihan", d: "Rambut biasanya mulai tumbuh kembali 3–6 bulan setelah kemoterapi selesai, terkadang dengan warna atau tekstur yang sedikit berbeda (lebih keriting atau lebih halus)." },
+      { t: "Bagaimana Perawatannya?", d: "- Gunakan sampo berbahan lembut atau sampo bayi yang tidak mengandung deterjen keras.\n- Jangan mencuci rambut setiap hari; cukup 2–3 kali seminggu dengan air suam-suam kuku (tidak panas).\n- Jangan gunakan pengering rambut (hair dryer), alat catok, atau pengeriting rambut elektrik.\n- Gunakan sisir bergigi jarang atau sikat rambut bayi yang sangat lembut.\n- Jika berada di luar ruangan, oleskan tabir surya pada kulit kepala atau gunakan topi.\n- Gunakan wig (rambut palsu), syal, turban, atau topi yang nyaman. Pastikan bahan penutup kepala tidak menyebabkan gatal atau panas." }
+    ]
+  }
+];
+
 const EducationView = () => {
+  const [expanded, setExpanded] = useState('nyeri');
+
   return (
     <Layout activeTab="edu">
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-        <h1 className="page-title">Panduan Restoratif Anda</h1>
-        <p className="page-subtitle">Berdasarkan laporan gejala terakhir Anda, kami menyusun langkah-langkah praktis untuk membantu Anda merasa lebih nyaman hari ini.</p>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="pb-12">
+        <h1 className="page-title">Pusat Edukasi Keluhan</h1>
+        <p className="page-subtitle">Panduan detail untuk membantu Anda merawat dan mengatasi setiap gejala pasca kemoterapi.</p>
         
-        <div className="card-main !p-0 overflow-hidden mb-10">
-          <img src="/pain_management.png" alt="Manajemen Nyeri" className="w-full h-56 object-cover" />
-          <div className="bg-[#e0f2f1] p-6 flex items-center gap-4">
-             <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-[#004d40]">
-               <Activity size={20} />
+        <div className="space-y-4">
+          {EDUCATION_CONTENT.map((section) => (
+             <div key={section.id} className="bg-white rounded-[24px] shadow-sm overflow-hidden border border-slate-100">
+                <div 
+                  onClick={() => setExpanded(expanded === section.id ? null : section.id)}
+                  style={{ backgroundColor: expanded === section.id ? section.bg : 'white' }}
+                  className="p-5 flex items-center justify-between cursor-pointer transition-colors"
+                >
+                   <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl flex items-center justify-center shadow-inner" style={{ backgroundColor: expanded === section.id ? 'white' : section.bg, color: section.color }}>
+                         <section.icon size={22} />
+                      </div>
+                      <h3 className="font-extrabold text-sm" style={{ color: expanded === section.id ? section.color : '#1e293b' }}>{section.title}</h3>
+                   </div>
+                   <ChevronRight className={`text-slate-400 transition-transform ${expanded === section.id ? 'rotate-90' : ''}`} />
+                </div>
+                
+                <AnimatePresence>
+                  {expanded === section.id && (
+                    <motion.div 
+                      initial={{ height: 0 }} 
+                      animate={{ height: 'auto' }} 
+                      exit={{ height: 0 }}
+                      className="overflow-hidden bg-white"
+                    >
+                       <div className="p-6 border-t border-slate-50 space-y-6">
+                         {section.items.map((item, idx) => (
+                           <div key={idx}>
+                             <h4 className="font-bold text-sm text-slate-800 mb-2">{item.t}</h4>
+                             <p className="text-[13px] text-slate-500 font-medium leading-relaxed whitespace-pre-line">{item.d}</p>
+                           </div>
+                         ))}
+                       </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
              </div>
-             <h3 className="font-black text-[#004d40]">Edukasi Manajemen Nyeri</h3>
-          </div>
-          <div className="p-6 space-y-6">
-             {[
-               { n: 1, t: "Teknik Relaksasi", d: "Tarik napas dalam melalui hidung (hitung sampai 4), tahan, lalu buang perlahan melalui mulut (hitung sampai 6). Ulangi 3-4 kali sehari sambil duduk tegak/berbaring santai." },
-               { n: 2, t: "Teknik Pengalihan Perhatian", d: "Fokuslah pada hal yang Anda sukai, seperti mendengarkan musik, menonton, membaca, atau mengobrol." },
-               { n: 3, t: "Pijatan Lembut", d: "Gunakan kompres hangat pd area kaku, kompres dingin u/ area berdenyut. Hindari area yang baru saja diradiasi." },
-               { n: 4, t: "Atur Posisi Tidur", d: "Punggung: terlentang bantal di lutut. Leher: bantal di lekukan. Perut: setengah duduk." },
-             ].map((step) => (
-               <div key={step.n} className="flex gap-4">
-                  <div className="w-8 h-8 rounded-full bg-[#b2dfdb] flex items-center justify-center text-[#00796b] font-black text-xs shrink-0">{step.n}</div>
-                  <div>
-                    <h4 className="font-bold text-slate-800 text-sm mb-1">{step.t}</h4>
-                    <p className="text-xs text-slate-500 font-medium leading-relaxed">{step.d}</p>
-                  </div>
-               </div>
-             ))}
-             
-             <div style={{ background: '#fff8e1', padding: '16px', borderRadius: '16px', marginTop: '24px', borderLeft: '4px solid #f57f17' }}>
-                <h4 style={{ fontWeight: '800', fontSize: '13px', color: '#f57f17', marginBottom: '8px' }}>Kapan Harus Minum Obat?</h4>
-                <p style={{ fontSize: '12px', color: '#64748b', lineHeight: '1.6' }}>Patuhi jadwal tepat waktu! Jangan menunggu nyeri menjadi "sangat berat". Catat skala 0-10 di aplikasi dan segera hubungi jika nyeri tidak kunjung reda.</p>
-             </div>
-             <button 
-               onClick={() => alert("Memutar panduan audio pernapasan...")}
-               style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#006257', color: 'white', padding: '16px', borderRadius: '32px', fontSize: '14px', fontWeight: '800', border: 'none', cursor: 'pointer', marginTop: '16px' }}
-             >
-               <Play size={14} fill="currentColor" /> Mulai Audio Terpandu
-             </button>
-          </div>
-        </div>
-
-        <div className="card-main p-8 border-l-8 border-l-[#81d4fa] overflow-hidden">
-           <img src="/diet_nausea.png" alt="Mual & Muntah" className="w-full h-48 object-cover rounded-2xl mb-6 shadow-sm" />
-           <div className="flex items-center gap-4 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-[#e1f5fe] flex items-center justify-center text-[#0288d1]">
-                <Utensils size={20} />
-              </div>
-              <h3 className="font-black text-slate-800">Mual & Muntah</h3>
-           </div>
-           <p className="text-xs font-bold text-slate-500 leading-relaxed mb-6">Kelola rasa tidak nyaman pada perut dengan penyesuaian diet sederhana.</p>
-           <ul className="space-y-4 mb-8">
-              {[
-                "Makan porsi kecil namun sering (6-8 kali sehari).",
-                "Pilih cairan dingin atau es batu untuk hidrasi.",
-                "Hindari makanan beraroma tajam atau berminyak."
-              ].map((item, i) => (
-                <li key={i} className="flex gap-3 items-start">
-                   <div className="mt-1"><CheckCircle2 size={16} className="text-[#00796b]" /></div>
-                   <span className="text-xs font-bold text-slate-600 leading-relaxed">{item}</span>
-                </li>
-              ))}
-           </ul>
-           <button 
-             onClick={() => alert("Mengunduh Menu Diet Rekomendasi (PDF)...")}
-             style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', background: '#e1f5fe', color: '#0288d1', borderRadius: '16px', border: 'none', fontSize: '13px', fontWeight: '800', cursor: 'pointer' }}
-           >
-             Lihat Menu Diet Rekomendasi
-             <ChevronRight size={18} />
-           </button>
+          ))}
         </div>
       </motion.div>
     </Layout>
@@ -1015,6 +1143,7 @@ const AdminLayout = ({ children }) => {
           {[
             { to: "/admin", icon: LayoutDashboard, label: "Ringkasan" },
             { to: "/admin/patients", icon: Users, label: "Data Pasien" },
+            { to: "/admin/chat", icon: MessageCircle, label: "Pesan" },
             { to: "/admin/education", icon: BookOpen, label: "CMS Edukasi" },
             { to: "/admin/emergency", icon: AlertTriangle, label: "Log Darurat" },
             { to: "/admin/questions", icon: Settings, label: "Pengaturan Input" }
@@ -1220,80 +1349,220 @@ const AdminQuestions = ({ questions, setQuestions, guidance, setGuidance }) => {
 // --- CHAT COMPONENT ---
 
 const ChatView = ({ isAdmin = false }) => {
-  const [messages, setMessages] = useState([
-    { id: 1, text: "Halo Dokter, saya merasa mual setelah kemo pagi tadi.", sender: 'patient', time: '10:30' },
-    { id: 2, text: "Halo Pak Ahmad. Sudah coba minum air jahe hangat?", sender: 'doctor', time: '10:35' },
-  ]);
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
+  const [patientsList, setPatientsList] = useState([]);
+  const [selectedPatientId, setSelectedPatientId] = useState(null);
+  const [selectedPatientName, setSelectedPatientName] = useState("");
 
-  const send = () => {
-    if (!input.trim()) return;
+  useEffect(() => {
+    if (isAdmin) {
+      supabase.from('patients').select('*').then(({ data }) => {
+        if (data) setPatientsList(data);
+      });
+    } else {
+      const storedTheme = localStorage.getItem('chemo_patient');
+      if (storedTheme) {
+        const u = JSON.parse(storedTheme);
+        setSelectedPatientId(u.id);
+        setSelectedPatientName(u.name);
+      }
+    }
+  }, [isAdmin]);
+
+  useEffect(() => {
+    if (!selectedPatientId) return;
+
+    const fetchMsg = async () => {
+      const { data, error } = await supabase.from('chat_messages').select('*').eq('patient_id', selectedPatientId).order('created_at', { ascending: true });
+      if (data && !error) {
+        setMessages(data.map(m => ({ id: m.id, text: m.message, sender: m.sender, time: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) })));
+      } else {
+        setMessages([
+          { id: 1, text: "Halo Admin, saya merasa mual setelah kemo pagi tadi.", sender: 'patient', time: '10:30' },
+          { id: 2, text: "Halo Pak Ahmad. Sudah coba minum air jahe hangat?", sender: 'doctor', time: '10:35' },
+        ]);
+      }
+    };
+
+    fetchMsg();
+
+    const channel = supabase.channel('chat_changes')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `patient_id=eq.${selectedPatientId}` }, payload => {
+        setMessages(prev => {
+          // Hindari duplikasi jika pesan sudah ditambahkan secara optimistic
+          if (prev.find(m => m.id === payload.new.id || (m.temp && m.text === payload.new.message))) return prev;
+          return [...prev, { id: payload.new.id, text: payload.new.message, sender: payload.new.sender, time: new Date(payload.new.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }];
+        });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedPatientId]);
+
+  const send = async () => {
+    if (!input.trim() || !selectedPatientId) return;
     const newMsg = {
-      id: messages.length + 1,
+      patient_id: selectedPatientId,
+      message: input,
+      sender: isAdmin ? 'doctor' : 'patient'
+    };
+    
+    // Optimistic Update langsung di layar pemengirim
+    const tempMsg = {
+      id: Date.now(),
+      temp: true,
       text: input,
-      sender: isAdmin ? 'doctor' : 'patient',
+      sender: newMsg.sender,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
-    setMessages([...messages, newMsg]);
+    setMessages(prev => [...prev, tempMsg]);
     setInput("");
+    
+    await supabase.from('chat_messages').insert([newMsg]);
   };
 
   return (
-    <div className={`flex flex-col h-full bg-[#f8fafc] ${isAdmin ? '' : 'mobile-container'} animate-fade-in`}>
-      <header className="p-6 bg-white flex items-center gap-4 border-b border-indigo-50 sticky top-0 z-20">
-        {!isAdmin && <Link to="/" className="text-indigo-400 p-2 hover:bg-indigo-50 rounded-full transition-colors"><ChevronLeft size={24} /></Link>}
-        <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 rotate-3 shadow-sm">
-           <User size={24} />
-        </div>
-        <div>
-          <h3 className="font-extrabold text-[#1e1b4b] leading-tight">{isAdmin ? 'Ahmad Zakaria' : 'Dr. Sarah Smith'}</h3>
-          <p className="text-[10px] font-black text-green-500 uppercase tracking-widest flex items-center gap-1.5 pt-0.5">
-             <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Online
-          </p>
-        </div>
-      </header>
+    <div 
+      className={`flex w-full bg-[#f8fafc] ${isAdmin ? 'rounded-3xl border border-indigo-50 shadow-inner overflow-hidden' : 'h-full flex-col mobile-container'} animate-fade-in`}
+      style={isAdmin ? { height: 'calc(100vh - 96px)' } : {}}
+    >
+       {isAdmin && (
+         <div className="w-1/3 bg-white border-r border-indigo-50 flex flex-col h-full rounded-l-3xl">
+            <div className="p-6 border-b border-indigo-50">
+               <h3 className="font-extrabold text-[#1e1b4b]">Daftar Pasien</h3>
+               <p className="text-xs text-slate-400">Pilih pasien untuk memulai percakapan</p>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+               {patientsList.map(p => (
+                 <div key={p.id} onClick={() => { setSelectedPatientId(p.id); setSelectedPatientName(p.name); }} className={`p-4 border-b border-slate-50 cursor-pointer transition-colors flex items-center gap-4 ${selectedPatientId === p.id ? 'bg-indigo-50 border-l-4 border-l-indigo-600' : 'hover:bg-slate-50'}`}>
+                    <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${p.name || 'Random'}`} alt="Avatar" className="w-10 h-10 rounded-full bg-slate-100 shadow-sm" />
+                    <div>
+                      <h4 className="font-bold text-slate-800 text-sm">{p.name || 'Pasien'}</h4>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">#{p.record_id || 'MR'}</p>
+                    </div>
+                 </div>
+               ))}
+            </div>
+         </div>
+       )}
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
-        {messages.map((m) => (
-          <div key={m.id} className={`flex ${m.sender === (isAdmin ? 'doctor' : 'patient') ? 'justify-end' : 'justify-start'}`}>
-            <div className="max-w-[85%] group">
-               <div className={`p-4 shadow-sm text-sm font-bold leading-relaxed ${
-                 m.sender === (isAdmin ? 'doctor' : 'patient') 
-                   ? 'bg-indigo-600 text-white rounded-t-[24px] rounded-bl-[24px] rounded-br-[6px]' 
-                   : 'bg-white text-[#1e1b4b] rounded-t-[24px] rounded-br-[24px] rounded-bl-[6px] border border-indigo-50'
-               }`}>
-                 {m.text}
-               </div>
-               <p className={`text-[9px] mt-2 font-black uppercase tracking-widest text-indigo-300 ${m.sender === (isAdmin ? 'doctor' : 'patient') ? 'text-right' : 'text-left'}`}>
-                 {m.time}
-               </p>
+       {(!isAdmin || selectedPatientId) ? (
+          <div className="flex-1 flex flex-col h-full relative">
+            <header className="p-6 bg-white flex items-center gap-4 border-b border-indigo-50 sticky top-0 z-20">
+              {!isAdmin && <Link to="/" className="text-indigo-400 p-2 hover:bg-indigo-50 rounded-full transition-colors"><ChevronLeft size={24} /></Link>}
+              <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center shadow-sm overflow-hidden border-2 border-white">
+                 <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${isAdmin ? selectedPatientName : 'Admin'}`} alt="Profile" className="w-full h-full object-cover bg-indigo-50" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-[#1e1b4b] leading-tight">{isAdmin ? selectedPatientName : 'Admin'}</h3>
+                <p className="text-[10px] font-black text-green-500 uppercase tracking-widest flex items-center gap-1.5 pt-0.5">
+                   <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Online
+                </p>
+              </div>
+            </header>
+
+            <div className={`flex-1 overflow-y-auto p-6 space-y-6 ${isAdmin ? 'bg-slate-50' : ''}`}>
+              {messages.map((m) => (
+                <div key={m.id} className={`flex ${m.sender === (isAdmin ? 'doctor' : 'patient') ? 'justify-end' : 'justify-start'}`}>
+                  <div className="max-w-[85%] group">
+                     <div className={`p-4 shadow-sm text-sm font-bold leading-relaxed ${
+                       m.sender === (isAdmin ? 'doctor' : 'patient') 
+                         ? 'bg-indigo-600 text-white rounded-t-[24px] rounded-bl-[24px] rounded-br-[6px]' 
+                         : 'bg-white text-[#1e1b4b] rounded-t-[24px] rounded-br-[24px] rounded-bl-[6px] border border-indigo-50'
+                     }`}>
+                       {m.text}
+                     </div>
+                     <p className={`text-[9px] mt-2 font-black uppercase tracking-widest text-indigo-300 ${m.sender === (isAdmin ? 'doctor' : 'patient') ? 'text-right' : 'text-left'}`}>
+                       {m.time}
+                     </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="p-6 bg-white border-t border-indigo-50 flex gap-4 items-center">
+              <div className="flex-1 p-1 bg-indigo-50/50 rounded-full border border-indigo-50 flex items-center pr-1 focus-within:ring-2 ring-indigo-200 transition-all shadow-inner">
+                <input 
+                  type="text" 
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && send()}
+                  placeholder="Tulis pesan..."
+                  className="flex-1 p-3 px-5 bg-transparent text-sm font-bold text-[#1e1b4b] placeholder:text-indigo-200 focus:outline-none"
+                />
+                <button 
+                  onClick={send}
+                  className="w-11 h-11 rounded-full bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200 active:scale-90 transition-transform"
+                >
+                  <Send size={18} />
+                </button>
+              </div>
             </div>
           </div>
-        ))}
-      </div>
-
-      <div className="p-6 bg-white border-t border-indigo-50 flex gap-4 items-center">
-        <div className="flex-1 p-1 bg-indigo-50/50 rounded-full border border-indigo-50 flex items-center pr-1 focus-within:ring-2 ring-indigo-200 transition-all shadow-inner">
-          <input 
-            type="text" 
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && send()}
-            placeholder="Tulis pesan..."
-            className="flex-1 p-3 px-5 bg-transparent text-sm font-bold text-[#1e1b4b] placeholder:text-indigo-200 focus:outline-none"
-          />
-          <button 
-            onClick={send}
-            className="w-11 h-11 rounded-full bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200 active:scale-90 transition-transform"
-          >
-            <Send size={18} />
-          </button>
-        </div>
-      </div>
+       ) : (
+          <div className="flex-1 flex flex-col items-center justify-center text-slate-400 bg-slate-50 rounded-r-3xl">
+             <MessageSquareHeart size={64} className="text-indigo-100 mb-4" />
+             <p className="font-bold">Pilih pasien untuk melihat percakapan</p>
+          </div>
+       )}
     </div>
   );
 };
 
+
+// --- GLOBAL CHAT NOTIFIER ---
+const GlobalChatNotifier = ({ patientId, isAdminRoute }) => {
+  const [toastStr, setToastStr] = useState(null);
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (location.pathname.includes('/chat')) {
+      setToastStr(null);
+    }
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (isAdminRoute) {
+      const channel = supabase.channel('global_admin_chat')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: "sender=eq.patient" }, payload => {
+          if (!window.location.pathname.includes('/admin/chat')) {
+             setToastStr("Pasien mengirim pesan darurat baru.");
+             setTimeout(() => setToastStr(null), 5000);
+          }
+        })
+        .subscribe();
+      return () => supabase.removeChannel(channel);
+    } else if (patientId) {
+      const channel = supabase.channel('global_patient_chat')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `patient_id=eq.${patientId}` }, payload => {
+          if (payload.new.sender === 'doctor' && window.location.pathname !== '/chat') {
+             setToastStr("Anda mendapat balasan dari Admin.");
+             setTimeout(() => setToastStr(null), 5000);
+          }
+        })
+        .subscribe();
+      return () => supabase.removeChannel(channel);
+    }
+  }, [patientId, isAdminRoute]);
+
+  if (!toastStr) return null;
+
+  return (
+    <div onClick={() => navigate(isAdminRoute ? '/admin/chat' : '/chat')} className="fixed top-8 right-8 bg-white border-l-4 border-l-indigo-600 rounded-xl shadow-2xl p-4 flex items-center gap-4 z-50 animate-fade-in cursor-pointer hover:bg-slate-50 transition">
+      <div className="w-10 h-10 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600">
+        <MessageCircle size={20} className="animate-bounce" />
+      </div>
+      <div>
+         <h4 className="font-bold text-slate-800 text-sm">Notifikasi Chat</h4>
+         <p className="text-xs text-slate-500">{toastStr}</p>
+      </div>
+    </div>
+  );
+};
 
 // --- MAIN APP ---
 function App() {
@@ -1323,6 +1592,7 @@ function App() {
 
   return (
     <Router>
+      <GlobalChatNotifier patientId={patientId} isAdminRoute={isAdminRoute} />
       <Routes>
         <Route path="/" element={<PatientHome questions={questions} patientName={patientName} />} />
         <Route path="/monitor" element={<SelfControl questions={questions} guidance={guidance} patientId={patientId} />} />
@@ -1334,6 +1604,7 @@ function App() {
         <Route path="/admin" element={<AdminLayout><AdminDashboard /></AdminLayout>} />
         <Route path="/admin/patients" element={<AdminLayout><AdminPatients /></AdminLayout>} />
         <Route path="/admin/education" element={<AdminLayout><AdminEducationCMS /></AdminLayout>} />
+        <Route path="/admin/chat" element={<AdminLayout><ChatView isAdmin={true} /></AdminLayout>} />
         <Route path="/admin/emergency" element={<AdminLayout><AdminEmergencyLogs /></AdminLayout>} />
         <Route path="/admin/questions" element={<AdminLayout><AdminQuestions questions={questions} setQuestions={setQuestions} guidance={guidance} setGuidance={setGuidance} /></AdminLayout>} />
       </Routes>
