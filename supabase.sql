@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS patients (
   record_id text UNIQUE NOT NULL,
   diagnosis text NOT NULL,
   status text NOT NULL DEFAULT 'Normal',
+  chemo_date date,
   created_at timestamp with time zone DEFAULT now()
 );
 

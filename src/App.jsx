@@ -130,7 +130,8 @@ const RegistrationView = ({ onComplete }) => {
               return;
            }
            newId = data[0].id;
-           onComplete(name, newId);
+           const cDate = data[0].chemo_date;
+           onComplete(name, newId, cDate);
         } else {
            alert("Nama atau password salah, atau pasien belum terdaftar.");
         }
@@ -138,7 +139,6 @@ const RegistrationView = ({ onComplete }) => {
         // Handle Register
         const { data, error } = await supabase.from('patients').insert([{ 
           name, 
-          password,
           record_id: record || `MR-${Math.floor(Math.random() * 100000)}`,
           diagnosis: diagnosis || 'Rawat Jalan',
           status: 'Menunggu Verifikasi Admin'
@@ -229,10 +229,6 @@ const RegistrationView = ({ onComplete }) => {
                 <option>Doxorubicin + Cyc</option>
                 <option>Fluorouracil</option>
               </select>
-            </div>
-            <div>
-              <label className="label-field">Tanggal Kemoterapi</label>
-              <input type="date" className="input-field" />
             </div>
           </div>
           </section>
@@ -402,6 +398,12 @@ const INITIAL_GUIDANCE = {
   }
 };
 
+const formatDate = (dateString) => {
+  if (!dateString) return '';
+  const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+  return new Date(dateString).toLocaleDateString('id-ID', options);
+};
+
 // --- HELPER COMPONENTS ---
 const Card = ({ children, className = "" }) => (
   <div className={`glass-card ${className}`}>
@@ -410,7 +412,7 @@ const Card = ({ children, className = "" }) => (
 );
 
 // --- PATIENT VIEWS ---
-const PatientHome = ({ questions, patientName }) => {
+const PatientHome = ({ questions, patientName, chemoDate }) => {
   const navigate = useNavigate();
   
   return (
@@ -430,15 +432,13 @@ const PatientHome = ({ questions, patientName }) => {
            <div>
               <span className="bg-[#004d40] text-[9px] font-black text-white px-3 py-1.5 rounded-lg uppercase tracking-widest mb-3 inline-block">Data Pasien</span>
               <h3 className="text-xl font-black mb-1">{patientName || 'Nama Pasien'}</h3>
-              <p className="text-sm font-bold text-[#004d40] mb-1">Diagnosa: Kanker Payudara</p>
-              <p className="text-sm font-bold text-[#004d40] mb-3">Kemoterapi ke-4</p>
-              <div className="flex items-center gap-2 text-[#004d40] font-bold text-xs opacity-90">
+              <p className="text-sm font-bold text-[#004d40] mb-3">Diagnosa: Kanker Payudara</p>
+              <div className="flex items-center gap-2 text-[#004d40] font-bold text-xs opacity-90 mt-4">
                  <Bell size={14} />
-                 <span>Jadwal: Kamis, 24 Oktober 2024</span>
+                 <span>Jadwal: {chemoDate ? formatDate(chemoDate) : 'Belum Dijadwalkan'}</span>
               </div>
            </div>
         </div>
-        <button className="bg-[#004d40] text-white px-6 py-2.5 rounded-xl font-bold text-xs mb-8">Detail Jadwal</button>
         <div className="flex justify-center">
            <div className="w-32 h-32 rounded-full border-4 border-white overflow-hidden shadow-2xl relative bg-white">
               <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${patientName || 'Patient'}`} className="w-full h-full object-cover" style={{ backgroundColor: '#eef2ff' }} />
@@ -1576,16 +1576,18 @@ function App() {
   const [isRegistered, setIsRegistered] = useState(!!initialUser);
   const [patientName, setPatientName] = useState(initialUser ? initialUser.name : '');
   const [patientId, setPatientId] = useState(initialUser ? initialUser.id : null);
+  const [patientChemoDate, setPatientChemoDate] = useState(initialUser ? initialUser.chemoDate : '');
 
   const isAdminRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/admin');
 
   if (!isRegistered && !isAdminRoute) {
-    return <RegistrationView onComplete={(name, id) => { 
+    return <RegistrationView onComplete={(name, id, cDate) => { 
       setPatientName(name); 
       setPatientId(id); 
+      setPatientChemoDate(cDate);
       setIsRegistered(true);
       if (typeof window !== 'undefined') {
-        localStorage.setItem('chemo_patient', JSON.stringify({ name, id }));
+        localStorage.setItem('chemo_patient', JSON.stringify({ name, id, chemoDate: cDate }));
       }
     }} />;
   }
@@ -1594,7 +1596,7 @@ function App() {
     <Router>
       <GlobalChatNotifier patientId={patientId} isAdminRoute={isAdminRoute} />
       <Routes>
-        <Route path="/" element={<PatientHome questions={questions} patientName={patientName} />} />
+        <Route path="/" element={<PatientHome questions={questions} patientName={patientName} chemoDate={patientChemoDate} />} />
         <Route path="/monitor" element={<SelfControl questions={questions} guidance={guidance} patientId={patientId} />} />
         <Route path="/education" element={<EducationView />} />
         <Route path="/emergency" element={<EmergencyView />} />

@@ -258,10 +258,45 @@ export const AdminPatients = () => {
                              </button>
                            </div>
                          )}
-                         <div className="flex items-center gap-2 mb-4">
-                           <LayoutGrid size={16} className="text-indigo-500" />
-                           <h4 className="font-bold text-slate-800 text-sm">Riwayat Analisis & Gejala Pasien</h4>
-                         </div>
+
+                         <div className="flex flex-col md:flex-row gap-6 mb-8 p-6 bg-indigo-50/50 rounded-2xl border border-indigo-100">
+                             <div className="flex-1">
+                               <div className="flex items-center gap-2 mb-2">
+                                 <Clock size={16} className="text-indigo-600" />
+                                 <h4 className="font-bold text-slate-800 text-sm">Jadwal Kemoterapi Selanjutnya</h4>
+                               </div>
+                               <div className="flex gap-3">
+                                 <input 
+                                   type="date" 
+                                   defaultValue={p.chemo_date}
+                                   id={`date-${p.id}`}
+                                   className="p-2.5 bg-white border border-indigo-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:ring-2 ring-indigo-100 transition-all"
+                                 />
+                                 <button 
+                                   onClick={async () => {
+                                     const newDate = document.getElementById(`date-${p.id}`).value;
+                                     const { error } = await supabase.from('patients').update({ chemo_date: newDate }).eq('id', p.id);
+                                     if (error) alert("Gagal update jadwal: " + error.message);
+                                     else alert("Jadwal pasien berhasil diperbarui!");
+                                   }}
+                                   className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-xs font-black hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-100"
+                                 >
+                                   SIMPAN JADWAL
+                                 </button>
+                               </div>
+                             </div>
+                             <div className="flex-1 border-l border-indigo-100 pl-6 hidden md:block">
+                               <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Status Verifikasi</p>
+                               <p className="text-xs font-bold text-slate-600">
+                                 {p.status === 'Menunggu Verifikasi Admin' ? 'Menunggu konfirmasi keaktifan akun' : 'Akun Aktif & Terverifikasi'}
+                               </p>
+                             </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 mb-4">
+                            <LayoutGrid size={16} className="text-indigo-500" />
+                            <h4 className="font-bold text-slate-800 text-sm">Riwayat Analisis & Gejala Pasien</h4>
+                          </div>
                         {p.reports && p.reports.length > 0 ? (
                             <div className="space-y-3">
                                {p.reports.map((r, i) => (
