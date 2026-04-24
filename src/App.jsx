@@ -65,6 +65,14 @@ const Layout = ({ children, activeTab }) => {
   const navigate = useNavigate();
   const storedUser = typeof window !== 'undefined' ? localStorage.getItem('chemo_patient') : null;
   const patientName = storedUser ? JSON.parse(storedUser).name : 'Patient';
+
+  const handlePatientLogout = () => {
+    if (window.confirm('Apakah Anda yakin ingin keluar dari profil?')) {
+      localStorage.removeItem('chemo_patient');
+      window.location.href = '/';
+    }
+  };
+
   return (
     <div className="mobile-container pb-32">
       <header className="header-top">
@@ -74,12 +82,20 @@ const Layout = ({ children, activeTab }) => {
           </div>
           <h2>CHEMO CARE</h2>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-3 items-center">
            <div style={{ padding: '8px', position: 'relative' }}>
-             <Bell size={24} className="text-slate-600" />
-             <div style={{ position: 'absolute', top: '10px', right: '10px', width: '8px', height: '8px', borderRadius: '50%', background: '#b71c1c' }}></div>
+             <Bell size={24} className="text-slate-400" />
+             <div style={{ position: 'absolute', top: '10px', right: '10px', width: '8px', height: '8px', borderRadius: '50%', background: '#ff5252' }}></div>
            </div>
-           <div style={{ width: '44px', height: '44px', borderRadius: '50%', overflow: 'hidden', border: '2px solid #e0f2f1' }}>
+           <button 
+             onClick={handlePatientLogout}
+             style={{ background: '#fef2f2', border: 'none', color: '#ef4444', padding: '8px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }}
+             className="hover:bg-red-100 hover:scale-105"
+             title="Logout"
+           >
+             <LogOut size={18} />
+           </button>
+           <div style={{ width: '44px', height: '44px', borderRadius: '50%', overflow: 'hidden', border: '2px solid #f1f5f9', marginLeft: '4px' }}>
              <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${patientName || 'User'}`} alt="User" style={{ width: '100%', height: '100%', objectFit: 'cover', backgroundColor: '#eef2ff' }} />
            </div>
         </div>
@@ -133,12 +149,13 @@ const RegistrationView = ({ onComplete }) => {
            const cDate = data[0].chemo_date;
            onComplete(name, newId, cDate);
         } else {
-           alert("Nama atau password salah, atau pasien belum terdaftar.");
+           alert("Akun tidak ditemukan atau password salah. Pastikan nama dan password sudah benar.");
         }
       } else {
         // Handle Register
         const { data, error } = await supabase.from('patients').insert([{ 
           name, 
+          password,
           record_id: record || `MR-${Math.floor(Math.random() * 100000)}`,
           diagnosis: diagnosis || 'Rawat Jalan',
           status: 'Menunggu Verifikasi Admin'
